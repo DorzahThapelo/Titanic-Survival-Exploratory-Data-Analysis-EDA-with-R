@@ -1,0 +1,233 @@
+---
+title: "Titanic Survival Exploratory Data Analysis(EDA) with R"
+author: "Thapelo Dikgomo"
+date: "2023-10-23"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Exploratory Data Analysis for Titanic Dataset.
+
+In this Titanic Survival Exploratory Data Analysis (EDA), we (in terms of looking at other data analysts like me) really dived into the dataset related to the passengers aboard the Titanic. We were on a mission to uncover patterns and insights regarding survival factors. We didn't shy away from the nitty-gritty details, examining variables such as passenger class, age, gender, and embarked location to understand how they correlated with survival rates.
+
+As I sifted through the data, initial observations started revealing interesting trends. It was fascinating to see how certain demographics or classes had higher survival rates. To make sense of it all, we brought out the big guns—visualization tools like charts and graphs. These not only made our findings pop but also helped communicate the story the data was telling.
+
+Of course, no analysis is complete without dealing with the messy stuff. I tackled missing data, outliers, and anomalies head-on to ensure the integrity of our analysis. It was like detective work, piecing together the puzzle of the Titanic's survival dynamics.
+
+By the time we wrapped up our exploration, we had some solid conclusions. We could shine a light on the factors that played a role in survival on the Titanic. The insights didn't just stop at numbers; they provided a deeper understanding of the historical context. We were thrilled that our analysis could contribute to discussions on the social and demographic aspects of the Titanic disaster.
+
+```{r Importing of Libraries}
+
+# For Data Manipulation
+library(dplyr)
+
+# For Plotting
+library(ggplot2)
+
+# For Ignoring Warnings
+options(warn = -1)
+
+```
+```{r Data Ingestion}
+
+# Loading of Datasets
+Data <- read.csv('Titanic_gender_submission.csv')
+train_data <- read.csv('train.csv')
+test_data <- read.csv('test.csv')
+
+```
+
+
+```{r Data Understanding}
+
+# Understanding Titanic_gender_submission Data
+head(data, n = 10)
+str(data)
+summary(data)
+
+# Understanding the Train Data
+head(train_data)
+str(train_data) # Data Information
+summary(train_data) # Data Description
+
+# Understanding the Train Data
+head(test_data) 
+str(test_data) # Data Information
+summary(test_data) # Data Description
+
+```
+
+```{r Data Preparation}
+
+# Removal of Duplicate Rows
+liste <- list(train_data, test_data)
+for (i in liste) {
+  cat("Duplicate Data Sum:", sum(duplicated(i)), "\n")
+  if (sum(duplicated(i)) != 0) {
+    cat("Before Removing Duplicates:", nrow(i), "\n")
+    i <- i[!duplicated(i), ]
+    cat("After Removing Duplicates:", nrow(i), "\n")
+  }
+}
+
+# Checking Missing Values on Train Data
+Train_Null_Counts <- colSums(is.na(train_data))
+print(Train_Null_Counts)
+
+# Checking Missing Values on Test Data
+Test_Null_Counts <- colSums(is.na(test_data))
+print(Test_Null_Counts)
+
+# Filling Missing Values for Train Data
+train_data$Age[is.na(train_data$Age)] <- 29.5
+train_data$Fare[is.na(train_data$Embarked)] <- "S"
+
+# Fill Missing Values for Test Data
+test_data$Age[is.na(test_data$Age)] <- 29.5
+test_data$Fare[is.na(test_data$Fare)] <- median(test_data$Fare, na.rm = TRUE)
+
+# Drop Unnecessary Columns
+train_data <- train_data[, !(names(train_data) %in% c("PassengerId", "Name", "Ticket", "Cabin"))]
+test_data <- test_data[, !(names(test_data) %in% c("PassengerId", "Name", "Ticket", "Cabin"))]
+
+# Insert Survived Column on Test Data
+test_data <- cbind(Survived = data$Survived, test_data)
+
+# Concat Train Data and Test Data
+df <- rbind(train_data, test_data)
+str(df)
+
+# Dataframe
+dim(df)
+
+# View Dataset
+View(df)
+```
+
+```{r Nunique and Unique Values}
+
+# Exploring Nunique Values
+column_names <- names(df)
+for (col_name in column_names) {
+  cat(col_name, ":", length(unique(df[[col_name]])), "\n")
+}
+
+# Exploring Unique Values
+cols <- c("Pclass", "Embarked")
+for (col in cols) {
+  if (is.character(df[[col]])) {
+    cat(col, ":", unique(df[[col]]), "\n")
+  }
+}
+
+```
+
+```{r Exploratory Data Analysis}
+
+# General Passenger Profile (Histogram)
+hist(df$Age, breaks = 8, col = "lightblue", main = "General Passenger Profile", xlab = "Age")
+
+par(mfrow=c(3,3))
+hist(df$Pclass, breaks=9, main="Pclass", xlab="Pclass", col="lightblue")
+hist(df$Survived, breaks=9, main="Survived", xlab="Survived", col="lightblue")
+hist(df$Age, breaks=9, main="Age", xlab="Age", col="lightblue")
+hist(df$SibSp, breaks=9, main="SibSp", xlab="SibSp", col="lightblue")
+hist(df$Parch, breaks=9, main="Parch", xlab="Parch", col="lightblue")
+
+# General Passenger Profile (Pie Charts)
+par(mfrow=c(1,4))
+pie(table(df$Survived), main="Survival", labels=c("Died", "Survived"), col=c("red", "blue"))
+pie(table(df$Pclass), main="Pclass", labels=c("1st", "2nd", "3rd"), col=c("yellow", "red", "blue"))
+pie(table(df$Sex), main="Sex", labels=c("Male", "Female"), col=c("yellow", "red"))
+pie(table(df$Embarked), main="Embarked", labels=c("Cherbourg", "Queenstown", "Southampton"), col=c("yellow", "red", "blue"))
+
+# Percentage of Survivors according to Socio-Economic Class
+pclass <- table(df$Pclass, df$Survived)
+pclass_percentage <- round((pclass / sum(pclass)) * 100, 2)
+
+print(pclass_percentage)
+
+# Dataframe of Survival by Socio-Economic Class
+pclass <- as.data.frame(table(df$Pclass, df$Survived))
+pclass$Percentage <- round(pclass$Freq * 100 / sum(pclass$Freq), 2)
+colnames(pclass) <- c("Pclass", "Survived", "Count", "Percentage")
+
+# Graph of Survivors by Socio-Economic Class
+ggplot(pclass, aes(x = factor(Pclass), y = Percentage, fill = factor(Survived))) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Percentage of Survivors by Socio-Economic Class",
+       x = "Pclass",
+       y = "Percentage") +
+  scale_fill_manual(values = c("blue", "red")) +
+  scale_x_discrete(labels = c("1st", "2nd", "3rd")) +
+  theme_minimal()
+
+# Percentage of Survivors according to Gender
+gender <- table(df$Sex, df$Survived)
+gender_percentage <- round((gender / sum(gender)) * 100, 2)
+
+print(gender_percentage)
+
+# Dataframe of Survival by Gender
+gender <- as.data.frame(table(df$Sex, df$Survived))
+gender$Percentage <- round(gender$Freq * 100 / sum(gender$Freq), 2)
+colnames(gender) <- c("Sex", "Survived", "Count", "Percentage")
+
+# Graph of Survivors by Gender
+ggplot(gender, aes(x = factor(Sex), y = Percentage, fill = factor(Survived))) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Percentage of Survivors by Gender",
+       x = "Sex",
+       y = "Percentage") +
+  scale_fill_manual(values = c("blue", "red")) +
+  scale_x_discrete(labels = c("Female", "Male")) +
+  theme_minimal()
+
+# Probability of Survival based on Age
+density_plot <- ggplot(df, aes(x = Age, fill = factor(Survived))) +
+  geom_density(alpha = 0.5) +
+  labs(title = "Age & Survival Relationship", x = "Age", y = "Density") +
+  scale_fill_manual(values = c("blue", "green")) +
+  theme_minimal()
+
+print(density_plot)
+
+# Probability of Survival of those with siblings/spouse
+sibsp_plot <- ggplot(df, aes(x = factor(SibSp), fill = factor(Survived))) +
+  geom_bar(position = "fill", alpha = 0.7, stat = "count") +
+  labs(title = "Probability of Survival of those with Sibling/Spouse", 
+       x = "Sibling/Spouse", y = "Percentage") +
+  scale_fill_manual(values = c("blue", "green")) +
+  theme_minimal()
+
+print(sibsp_plot)
+
+# Probability of Survival of those with parents/children
+parch_plot <- ggplot(df, aes(x = factor(Parch), fill = factor(Survived))) +
+  geom_bar(position = "fill", alpha = 0.7, stat = "count") +
+  labs(title = "Probability of Survival of those with Parents/Children", 
+       x = "Parents/Children", y = "Percentage") +
+  scale_fill_manual(values = c("blue", "green")) +
+  theme_minimal()
+
+print(parch_plot)
+
+# Passenger (Fare & Survival) Relationship
+fare_plot <- ggplot(df, aes(x = Fare, fill = factor(Survived))) +
+  geom_density(alpha = 0.5) +
+  labs(title = "Fare & Survival Relationship", x = "Fare", y = "Density") +
+  scale_fill_manual(values = c("blue", "green")) +
+  theme_minimal()
+
+print(fare_plot)
+
+# Percentage of Survivors based on Embarkation Point
+embark <- table(df$Embarked, df$Survived)
+embark_percentage <- round((embark / sum(embark)) * 100, 2)
+
+print(embark_percentage)
+
+```
