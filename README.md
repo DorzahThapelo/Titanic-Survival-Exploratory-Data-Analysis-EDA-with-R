@@ -14,7 +14,7 @@ The sinking of the Titanic remains a captivating historical event, and this proj
 ## Getting Started
 1. **Clone the Repository:**
    ```bash
-   git clone https://github.com/yourusername/Titanic-Survival-EDA-R.git
+   git clone https://github.com/DorzahThapelo/Titanic-Survival-Exploratoy-Data-Analysis-EDA-with-R.git
    ```
 
 2. **Install Dependencies:**
